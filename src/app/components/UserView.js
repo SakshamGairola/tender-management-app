@@ -97,6 +97,11 @@ export default function UserView() {
 				setUpdateBids((prev) => !prev);
 			}
 		});
+		socket.on('timerExtended', () => {
+			setErrorMessage('New Bid submitted');
+			setSeverity('info');
+			setOpen(true);
+		});
 		// Remove event listener on component unmount
 		return () => socket.off('updateTenders');
 	}, [socket, tenders]);
@@ -116,7 +121,14 @@ export default function UserView() {
 					headers: { Authorization: `Bearer ${token}` },
 				}
 			);
+			const endTime = new Date(selectedTender.endTime).getTime();
+			const currentTime = new Date().getTime();
+			const timeDiff = endTime - currentTime;
 
+			if (timeDiff <= 5 * 60 * 1000 && !selectedTender.timerExtended) {
+				await axios.patch(`${API_URL}/tenders/extend`, { tenderId: selectedTender._id });
+				socket.emit('timerExtended', selectedTender._id);
+			}
 			setErrorMessage('Bid successfully submitted');
 			setSeverity('success');
 			setOpen(true);
