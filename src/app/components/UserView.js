@@ -24,7 +24,7 @@ import { formatDate } from '../common/utils';
 
 export default function UserView() {
 	const [tenders, setTenders] = useState([]);
-	const [selectedTender, setSelectedTender] = useState(null);
+	const [selectedTender, setSelectedTender] = useState('');
 	const [severity, setSeverity] = useState('');
 	const [open, setOpen] = useState(false);
 	const [updateBids, setUpdateBids] = useState(false);
@@ -97,10 +97,13 @@ export default function UserView() {
 				setUpdateBids((prev) => !prev);
 			}
 		});
-		socket.on('timerExtended', () => {
-			setErrorMessage('New Bid submitted');
-			setSeverity('info');
-			setOpen(true);
+		socket.on('timerExtended', (tenderId) => {
+			if (selectedTender._id === tenderId) {
+				setUpdateBids((prev) => !prev);
+				setErrorMessage('New Bid submitted');
+				setSeverity('info');
+				setOpen(true);
+			}
 		});
 		// Remove event listener on component unmount
 		return () => socket.off('updateTenders');
@@ -124,16 +127,16 @@ export default function UserView() {
 			const endTime = new Date(selectedTender.endTime).getTime();
 			const currentTime = new Date().getTime();
 			const timeDiff = endTime - currentTime;
-
 			if (timeDiff <= 5 * 60 * 1000 && !selectedTender.timerExtended) {
-				await axios.patch(`${API_URL}/tenders/extend`, { tenderId: selectedTender._id });
+				// await axios.patch(`${API_URL}/tenders/extend`, { tenderId: selectedTender._id });
 				socket.emit('timerExtended', selectedTender._id);
+			} else {
+				socket.emit('newBidAdded', selectedTender._id);
 			}
 			setErrorMessage('Bid successfully submitted');
 			setSeverity('success');
 			setOpen(true);
 			setBids(response.data);
-			socket.emit('newBidAdded', selectedTender._id);
 		} catch (err) {
 			setErrorMessage('Some error occured!');
 			setSeverity('error');
